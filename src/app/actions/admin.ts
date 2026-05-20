@@ -1,0 +1,38 @@
+"use server";
+
+import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/session";
+import bcrypt from "bcryptjs";
+import { revalidatePath } from "next/cache";
+
+export async function registerWorker(prevState: any, formData: FormData) {
+  const session = await getSession();
+  if (!session || session.role !== "ADMIN") return { error: "Немає доступу" };
+
+  const login = formData.get("login")?.toString();
+  const password = formData.get("password")?.toString();
+  const name = formData.get("name")?.toString();
+
+  if (!login || !password || !name) {
+    return { error: "Заповніть усі поля" };
+  }
+
+  const existing = await prisma.user.findUnique({ where: { login } });
+  if (existing) {
+    return { error: "Логін вже зайнятий" };
+  }
+
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  await prisma.user.create({
+    data: {
+      login,
+      password: hashedPassword,
+      name,
+      role: "WORKER",
+    },
+  });
+
+  revalidatePath("/admin");
+  return { success: true };
+}

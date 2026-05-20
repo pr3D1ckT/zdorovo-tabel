@@ -1,0 +1,28 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id       String  @id @default(uuid())
+  login    String  @unique
+  password String
+  name     String
+  role     String  @default("WORKER") // WORKER or ADMIN
+  shifts   Shift[]
+}
+
+model Shift {
+  id        String    @id @default(uuid())
+  workerId  String
+  worker    User      @relation(fields: [workerId], references: [id])
+  startTime DateTime  @default(now())
+  endTime   DateTime?
+}
