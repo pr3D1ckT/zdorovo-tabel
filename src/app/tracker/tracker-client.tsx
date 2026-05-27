@@ -6,6 +6,7 @@ import { stopShift } from "@/app/actions/shift";
 const MAX_DURATION_MS = 10 * 60 * 60 * 1000;
 
 function formatTime(ms: number) {
+  if (ms < 0) ms = 0;
   const totalSeconds = Math.floor(ms / 1000);
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -20,14 +21,11 @@ export default function TrackerClient({ startTimeIso }: { startTimeIso: string }
   useEffect(() => {
     const updateTimer = () => {
       const now = Date.now();
-      const diff = now - startTime;
-      if (diff >= MAX_DURATION_MS) {
-        setElapsed(MAX_DURATION_MS);
-        // Automatically stop shift on client if 10h is reached
-        stopShift();
-      } else {
-        setElapsed(diff);
-      }
+      let diff = now - startTime;
+      if (diff < 0) diff = 0;
+      if (diff >= MAX_DURATION_MS) diff = MAX_DURATION_MS;
+      
+      setElapsed(diff);
     };
 
     updateTimer();
@@ -45,23 +43,25 @@ export default function TrackerClient({ startTimeIso }: { startTimeIso: string }
         {formatTime(elapsed)}
       </div>
 
-      <button
-        onClick={() => stopShift()}
-        className="btn btn-danger"
-        style={{
-          width: "200px",
-          height: "200px",
-          borderRadius: "50%",
-          fontSize: "2.5rem",
-          fontWeight: 800,
-          boxShadow: "0 10px 25px -5px rgba(239, 68, 68, 0.5)",
-          textTransform: "uppercase",
-          letterSpacing: "0.1em",
-          marginTop: "1rem"
-        }}
-      >
-        Стоп
-      </button>
+      <form action={stopShift}>
+        <button
+          type="submit"
+          className="btn btn-danger"
+          style={{
+            width: "200px",
+            height: "200px",
+            borderRadius: "50%",
+            fontSize: "2.5rem",
+            fontWeight: 800,
+            boxShadow: "0 10px 25px -5px rgba(239, 68, 68, 0.5)",
+            textTransform: "uppercase",
+            letterSpacing: "0.1em",
+            marginTop: "1rem"
+          }}
+        >
+          Стоп
+        </button>
+      </form>
     </div>
   );
 }

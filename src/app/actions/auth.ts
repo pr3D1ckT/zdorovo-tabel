@@ -52,6 +52,26 @@ export async function login(prevState: any, formData: FormData) {
   }
 }
 
+export async function qrLogin(token: string) {
+  if (!token) return { error: "Некоректний QR код" };
+
+  const user = await prisma.user.findUnique({
+    where: { qrToken: token }
+  });
+
+  if (!user) {
+    return { error: "Користувача не знайдено або QR код недійсний" };
+  }
+
+  await createSession(user.id, user.role, user.name);
+
+  if (user.role === "ADMIN") {
+    redirect("/admin");
+  } else {
+    redirect("/tracker");
+  }
+}
+
 export async function logout() {
   await deleteSession();
   redirect("/login");

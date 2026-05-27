@@ -23,6 +23,7 @@ export async function registerWorker(prevState: any, formData: FormData) {
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
+  const qrToken = crypto.randomUUID();
 
   await prisma.user.create({
     data: {
@@ -30,8 +31,37 @@ export async function registerWorker(prevState: any, formData: FormData) {
       password: hashedPassword,
       name,
       role: "WORKER",
+      qrToken,
     },
   });
+
+  revalidatePath("/admin");
+  return { success: true };
+}
+
+export async function generateQrToken(userId: string) {
+  const session = await getSession();
+  if (!session || session.role !== "ADMIN") throw new Error("Немає доступу");
+
+  const qrToken = crypto.randomUUID();
+  
+  await prisma.user.update({
+    where: { id: userId },
+    data: { qrToken }
+  });
+  
+  revalidatePath("/admin");
+  return qrToken;
+}
+
+export async function deleteWorker(userId: string) {
+  const session = await getSession();
+  if (!session || session.role !== "ADMIN") throw new Error("Немає доступу");
+
+  await prisma.$transaction([
+    prisma.shift.deleteMany({ where: { workerId: userId } }),
+    prisma.user.delete({ where: { id: userId } }),
+  ]);
 
   revalidatePath("/admin");
   return { success: true };

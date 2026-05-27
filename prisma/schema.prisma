@@ -16,6 +16,7 @@ model User {
   password String
   name     String
   role     String  @default("WORKER") // WORKER or ADMIN
+  qrToken  String? @unique
   shifts   Shift[]
 }
 

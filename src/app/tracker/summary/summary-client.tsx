@@ -24,13 +24,15 @@ export default function SummaryClient() {
       <p style={{ color: "var(--text-muted)", fontSize: "0.875rem" }}>
         Автоматичний вихід через <span style={{ color: "var(--primary-color)", fontWeight: 700 }}>{countdown}</span> сек.
       </p>
-      <button 
-        onClick={() => logout()} 
-        className="btn btn-primary" 
-        style={{ marginTop: "1rem" }}
-      >
-        Вийти зараз
-      </button>
+      <form action={logout}>
+        <button 
+          type="submit" 
+          className="btn btn-primary" 
+          style={{ marginTop: "1rem" }}
+        >
+          Вийти зараз
+        </button>
+      </form>
     </div>
   );
 }

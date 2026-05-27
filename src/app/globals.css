@@ -122,3 +122,23 @@ body {
   margin-bottom: 1rem;
   text-align: center;
 }
+
+@keyframes laser {
+  0% { top: 5%; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { top: 95%; opacity: 0; }
+}
+
+.laser-line {
+  position: absolute;
+  left: 5%;
+  right: 5%;
+  height: 2px;
+  background: var(--primary-color);
+  box-shadow: 0 0 10px var(--primary-color), 0 0 20px var(--primary-color);
+  animation: laser 2.5s infinite ease-in-out;
+  z-index: 10;
+  pointer-events: none;
+}
+

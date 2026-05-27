@@ -3,16 +3,11 @@ import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import RegisterForm from "./register-form";
 import { logout } from "@/app/actions/auth";
+import WorkerStatsTable from "./worker-stats-table";
 
 export const metadata = {
   title: "Панель адміністратора | Zdorovo Tabel",
 };
-
-function formatDuration(ms: number) {
-  const totalHours = Math.floor(ms / (1000 * 60 * 60));
-  const totalMins = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
-  return `${totalHours}ч ${totalMins}м`;
-}
 
 export default async function AdminPage() {
   const session = await getSession();
@@ -24,21 +19,46 @@ export default async function AdminPage() {
   });
 
   const now = new Date();
-  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const kyivNowStr = now.toLocaleString("en-US", { timeZone: "Europe/Kiev" });
+  const kyivNow = new Date(kyivNowStr);
+
+  const startOfDay = new Date(kyivNow.getFullYear(), kyivNow.getMonth(), kyivNow.getDate());
   const startOfWeek = new Date(startOfDay);
   startOfWeek.setDate(startOfDay.getDate() - (startOfDay.getDay() === 0 ? 6 : startOfDay.getDay() - 1)); // Monday
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfMonth = new Date(kyivNow.getFullYear(), kyivNow.getMonth(), 1);
 
   const stats = workers.map(worker => {
     let day = 0, week = 0, month = 0;
-    for (const shift of worker.shifts) {
+    
+    const sortedShifts = [...worker.shifts].sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
+    const dailyDetails: { date: string; duration: number; shifts: { start: string, end: string | null }[] }[] = [];
+
+    for (const shift of sortedShifts) {
       if (!shift.endTime) continue;
       const duration = shift.endTime.getTime() - shift.startTime.getTime();
-      if (shift.startTime >= startOfDay) day += duration;
-      if (shift.startTime >= startOfWeek) week += duration;
-      if (shift.startTime >= startOfMonth) month += duration;
+      
+      const shiftKyivStr = shift.startTime.toLocaleString("en-US", { timeZone: "Europe/Kiev" });
+      const shiftKyiv = new Date(shiftKyivStr);
+
+      if (shiftKyiv >= startOfDay) day += duration;
+      if (shiftKyiv >= startOfWeek) week += duration;
+      if (shiftKyiv >= startOfMonth) month += duration;
+
+      const dateStr = shift.startTime.toLocaleDateString("uk-UA", { timeZone: "Europe/Kiev", day: '2-digit', month: '2-digit', year: 'numeric' });
+      
+      let dayEntry = dailyDetails.find(d => d.date === dateStr);
+      if (!dayEntry) {
+        dayEntry = { date: dateStr, duration: 0, shifts: [] };
+        dailyDetails.push(dayEntry);
+      }
+      dayEntry.duration += duration;
+      dayEntry.shifts.push({ 
+        start: shift.startTime.toISOString(), 
+        end: shift.endTime.toISOString() 
+      });
     }
-    return { name: worker.name, login: worker.login, day, week, month };
+
+    return { id: worker.id, name: worker.name, login: worker.login, day, week, month, dailyDetails, qrToken: worker.qrToken };
   });
 
   return (
@@ -59,33 +79,7 @@ export default async function AdminPage() {
         
         <div className="glass-panel" style={{ padding: "2rem" }}>
           <h2 style={{ marginBottom: "1.5rem", fontSize: "1.25rem" }}>Звіти по співробітниках</h2>
-          {stats.length === 0 ? (
-            <p style={{ color: "var(--text-muted)" }}>Немає зареєстрованих співробітників.</p>
-          ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
-              <thead>
-                <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.1)", color: "var(--text-muted)", fontSize: "0.875rem" }}>
-                  <th style={{ padding: "0.5rem 0" }}>Співробітник</th>
-                  <th style={{ padding: "0.5rem 0" }}>Сьогодні</th>
-                  <th style={{ padding: "0.5rem 0" }}>Тиждень</th>
-                  <th style={{ padding: "0.5rem 0" }}>Місяць</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stats.map(s => (
-                  <tr key={s.login} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                    <td style={{ padding: "1rem 0" }}>
-                      <div style={{ fontWeight: 600 }}>{s.name}</div>
-                      <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{s.login}</div>
-                    </td>
-                    <td style={{ padding: "1rem 0" }}>{formatDuration(s.day)}</td>
-                    <td style={{ padding: "1rem 0" }}>{formatDuration(s.week)}</td>
-                    <td style={{ padding: "1rem 0" }}>{formatDuration(s.month)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+          <WorkerStatsTable stats={stats} />
         </div>
       </div>
     </main>
