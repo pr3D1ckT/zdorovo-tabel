@@ -1,4 +1,4 @@
-import { getOrCreateActiveShift } from "@/app/actions/shift";
+import { getOrCreateActiveShift, getWorkerStats } from "@/app/actions/shift";
 import TrackerClient from "./tracker-client";
 import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
@@ -11,7 +11,10 @@ export default async function TrackerPage() {
   const session = await getSession();
   if (!session || session.role !== "WORKER") redirect("/login");
 
-  const shift = await getOrCreateActiveShift();
+  const [shift, stats] = await Promise.all([
+    getOrCreateActiveShift(),
+    getWorkerStats()
+  ]);
 
   if (!shift) {
     return <div>Помилка: не вдалося запустити зміну.</div>;
@@ -26,7 +29,12 @@ export default async function TrackerPage() {
       </div>
       
       <div className="glass-panel animate-fade-in" style={{ width: "100%", maxWidth: "500px", padding: "3rem 2rem" }}>
-        <TrackerClient startTimeIso={shift.startTime.toISOString()} />
+        <TrackerClient
+          startTimeIso={shift.startTime.toISOString()}
+          statsYesterday={stats?.yesterday ?? 0}
+          statsWeek={stats?.week ?? 0}
+          statsMonth={stats?.month ?? 0}
+        />
       </div>
     </main>
   );

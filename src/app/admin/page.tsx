@@ -31,7 +31,7 @@ export default async function AdminPage() {
     let day = 0, week = 0, month = 0;
     
     const sortedShifts = [...worker.shifts].sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
-    const dailyDetails: { date: string; duration: number; shifts: { start: string, end: string | null }[] }[] = [];
+    const dailyDetails: { date: string; duration: number; shifts: { id: string, start: string, end: string | null }[] }[] = [];
 
     for (const shift of sortedShifts) {
       if (!shift.endTime) continue;
@@ -53,12 +53,24 @@ export default async function AdminPage() {
       }
       dayEntry.duration += duration;
       dayEntry.shifts.push({ 
+        id: shift.id,
         start: shift.startTime.toISOString(), 
         end: shift.endTime.toISOString() 
       });
     }
 
-    return { id: worker.id, name: worker.name, login: worker.login, day, week, month, dailyDetails, qrToken: worker.qrToken };
+    const salaryMonth = (month / (1000 * 60 * 60)) * (worker.hourlyRate || 0);
+
+    return { 
+      id: worker.id, 
+      name: worker.name, 
+      login: worker.login, 
+      day, week, month, 
+      hourlyRate: worker.hourlyRate || 0,
+      salaryMonth,
+      dailyDetails, 
+      qrToken: worker.qrToken 
+    };
   });
 
   return (

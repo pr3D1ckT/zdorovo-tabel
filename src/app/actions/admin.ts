@@ -66,3 +66,60 @@ export async function deleteWorker(userId: string) {
   revalidatePath("/admin");
   return { success: true };
 }
+
+export async function updateHourlyRate(userId: string, rate: number) {
+  const session = await getSession();
+  if (!session || session.role !== "ADMIN") throw new Error("Немає доступу");
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { hourlyRate: rate }
+  });
+
+  revalidatePath("/admin");
+  return { success: true };
+}
+
+export async function updateShift(shiftId: string, startIso: string, endIso: string | null) {
+  const session = await getSession();
+  if (!session || session.role !== "ADMIN") throw new Error("Немає доступу");
+
+  await prisma.shift.update({
+    where: { id: shiftId },
+    data: { 
+      startTime: new Date(startIso),
+      endTime: endIso ? new Date(endIso) : null
+    }
+  });
+
+  revalidatePath("/admin");
+  return { success: true };
+}
+
+export async function createShift(workerId: string, startIso: string, endIso: string | null) {
+  const session = await getSession();
+  if (!session || session.role !== "ADMIN") throw new Error("Немає доступу");
+
+  await prisma.shift.create({
+    data: {
+      workerId,
+      startTime: new Date(startIso),
+      endTime: endIso ? new Date(endIso) : null
+    }
+  });
+
+  revalidatePath("/admin");
+  return { success: true };
+}
+
+export async function deleteShift(shiftId: string) {
+  const session = await getSession();
+  if (!session || session.role !== "ADMIN") throw new Error("Немає доступу");
+
+  await prisma.shift.delete({
+    where: { id: shiftId }
+  });
+
+  revalidatePath("/admin");
+  return { success: true };
+}

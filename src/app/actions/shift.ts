@@ -60,6 +60,55 @@ export async function getOrCreateActiveShift() {
   return newShift;
 }
 
+export async function getWorkerStats() {
+  const session = await getSession();
+  if (!session || session.role !== "WORKER") return null;
+
+  // Calculate Kyiv-time boundaries
+  const nowKyivStr = new Date().toLocaleString("en-US", { timeZone: "Europe/Kiev" });
+  const nowKyiv = new Date(nowKyivStr);
+
+  const startOfYesterday = new Date(nowKyiv);
+  startOfYesterday.setDate(nowKyiv.getDate() - 1);
+  startOfYesterday.setHours(0, 0, 0, 0);
+
+  const startOfToday = new Date(nowKyiv);
+  startOfToday.setHours(0, 0, 0, 0);
+
+  const startOfWeek = new Date(nowKyiv);
+  const dayOfWeek = nowKyiv.getDay() === 0 ? 6 : nowKyiv.getDay() - 1; // Monday = 0
+  startOfWeek.setDate(nowKyiv.getDate() - dayOfWeek);
+  startOfWeek.setHours(0, 0, 0, 0);
+
+  const startOfMonth = new Date(nowKyiv.getFullYear(), nowKyiv.getMonth(), 1);
+
+  const shifts = await prisma.shift.findMany({
+    where: {
+      workerId: session.userId,
+      endTime: { not: null },
+      startTime: { gte: startOfMonth }  // fetch from start of month — covers week & yesterday too
+    },
+    orderBy: { startTime: "desc" }
+  });
+
+  let yesterday = 0, week = 0, month = 0;
+
+  for (const shift of shifts) {
+    if (!shift.endTime) continue;
+    const duration = shift.endTime.getTime() - shift.startTime.getTime();
+
+    const shiftDateStr = shift.startTime.toLocaleString("en-US", { timeZone: "Europe/Kiev" });
+    const shiftDate = new Date(shiftDateStr);
+
+    // Yesterday: between startOfYesterday and startOfToday
+    if (shiftDate >= startOfYesterday && shiftDate < startOfToday) yesterday += duration;
+    if (shiftDate >= startOfWeek) week += duration;
+    if (shiftDate >= startOfMonth) month += duration;
+  }
+
+  return { yesterday, week, month };
+}
+
 export async function stopShift() {
   const session = await getSession();
   if (!session || session.role !== "WORKER") {

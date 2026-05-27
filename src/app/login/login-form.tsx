@@ -115,7 +115,7 @@ export default function LoginForm() {
             <button 
               type="button" 
               className="btn" 
-              style={{ width: "100%", background: "rgba(255,255,255,0.1)" }}
+              style={{ width: "100%", background: "rgba(255,255,255,0.1)", color: "white" }}
               onClick={() => setIsScanning(true)}
               disabled={isPending || isQrPending}
             >
